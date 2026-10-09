@@ -30,9 +30,16 @@ class _PayScreenState extends State<PayScreen> {
     req.write(jsonEncode({'amount': amount}));
     await req.close();
 
+    if (!mounted) return;
     setState(() => _balance = _balance - amount);
     ScaffoldMessenger.of(context)
         .showSnackBar(const SnackBar(content: Text('Paid!')));
+  }
+
+  @override
+  void dispose() {
+    _amountController.dispose();
+    super.dispose();
   }
 
   @override
