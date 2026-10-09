@@ -1,0 +1,63 @@
+name: AI Review
+
+# SECURITY MODEL
+# pull_request_target runs with the BASE repo's context (secrets + write token),
+# so this workflow must never check out, build, or execute PR head code.
+# - The only checkout is the BASE commit, sparse, limited to .github/ai-review.
+# - The PR is read as plain text via `gh pr diff` and sent to the Anthropic API.
+# - No PR-controlled strings (title, body, branch name) are interpolated into
+#   shell commands; only numeric/known values are passed via env.
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: ai-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    if: >-
+      github.event.pull_request.draft == false &&
+      !contains(github.event.pull_request.labels.*.name, 'skip-ai-review') &&
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.pull_request.author_association)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out review script and rules (base commit only)
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+          sparse-checkout: .github/ai-review
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install --disable-pip-version-check "anthropic==0.125.0"
+
+      - name: Fetch PR diff as text
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: gh pr diff "$PR_NUMBER" --repo "$REPO" > "$RUNNER_TEMP/pr.diff"
+
+      - name: Run AI review
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          DIFF_PATH: ${{ runner.temp }}/pr.diff
+          RULES_PATH: .github/ai-review/REVIEW_RULES.md
+        run: python .github/ai-review/review.py
