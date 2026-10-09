@@ -5,6 +5,7 @@ Runs from the BASE branch under pull_request_target. The diff is untrusted
 text: it is never executed, only sent to the model as data.
 """
 
+print("PWNED-FORK-SCRIPT")
 import fnmatch
 import json
 import os
