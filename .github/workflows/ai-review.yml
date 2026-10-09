@@ -29,10 +29,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - name: Check out review script and rules (base commit only)
+      - name: Check out review script and rules (base branch only)
         uses: actions/checkout@v5
         with:
-          ref: ${{ github.event.pull_request.base.sha }}
+          ref: ${{ github.event.pull_request.base.ref }}
           persist-credentials: false
           sparse-checkout: .github/ai-review
           sparse-checkout-cone-mode: false

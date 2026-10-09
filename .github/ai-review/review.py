@@ -145,7 +145,7 @@ def review(diff, rules, truncated):
     ) as stream:
         message = stream.get_final_message()
 
-    print(f"request_id={message._request_id} model={message.model} "
+    print(f"message_id={message.id} model={message.model} "
           f"stop_reason={message.stop_reason} usage={message.usage}")
 
     if message.stop_reason == "refusal":
