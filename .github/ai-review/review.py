@@ -15,7 +15,7 @@ import sys
 
 import anthropic
 
-MODEL = "claude-sonnet-5-5"
+MODEL = "claude-haiku-5-5"
 MARKER = "<!-- ai-review-bot -->"
 BOT_LOGIN = "github-actions[bot]"
 MAX_DIFF_CHARS = 150_000
@@ -133,15 +133,12 @@ def review(diff, rules, truncated):
     )
 
     client = anthropic.Anthropic()
-    with client.beta.messages.stream(
+    # Haiku has no server-side refusal fallback; a refusal is handled below.
+    with client.messages.stream(
         model=MODEL,
         max_tokens=16000,
         system=SYSTEM_PROMPT.format(rules=rules),
         messages=[{"role": "user", "content": user_content}],
-        # Server-side refusal fallback: a safety-classifier decline is retried on
-        # an appropriate fallback model inside the same call.
-        betas=["server-side-fallback-2026-07-01"],
-        extra_body={"fallbacks": "default"},
     ) as stream:
         message = stream.get_final_message()
 
